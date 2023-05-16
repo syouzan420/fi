@@ -1,3 +1,4 @@
+ghc maketext.hs
 ./maketext
 hastec Main.hs
 rm -r *.o
