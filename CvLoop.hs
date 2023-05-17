@@ -204,6 +204,7 @@ inputLoop c kc st = do
       print (elg p)
       print (isc p)
       print (ich st)
+      print (jps st)
       (_,nrg) <- getRandomNumIO (5,rgn p)
       let i = keyCodeToChar kc 
           (x,y) = xy p 
@@ -219,7 +220,7 @@ inputLoop c kc st = do
       putGrid c (igx-wd',iy) (gr (player nst))
       unless (ims nst) $ putMessageT c (imx+msc nst,iy+hi+3) (msg nst)
       if ils nst || i=='n' then nextStage c nst{ims=False} 
-                   else do
+                           else do
          let pxy = (px'+igx-wd,py'+1)
          if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
                         else putMozi c (chColors!!2) pxy [pl p'']

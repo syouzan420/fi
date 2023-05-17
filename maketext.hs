@@ -16,7 +16,7 @@ type Def = (String,Integer)
 data Mode = Fr | Bl | Ex | Mv | Pn | Wn | Cm | DB | DF deriving (Eq,Enum,Show)
 
 txPasses :: [FilePath]
-txPasses = ["fi0.txt","fi1.txt"]
+txPasses = ["fi0.txt","fi1.txt","fi2.txt"]
 
 tgPass :: FilePath
 tgPass = "Messages.hs"
