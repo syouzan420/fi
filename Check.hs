@@ -145,7 +145,7 @@ trEvent i ev@(e:es) st =
                      necs = delFrom i cs
                   in st{ils=True,evt=nevt,ecs=necs}               -- Leave Stage
           _   -> st
-   in st'{player=p{elg=elg p++ev}}
+   in st'{player=(player st'){elg=elg p++ev}}
   where p = player st
         evn = evt st
 
