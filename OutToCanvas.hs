@@ -1,4 +1,4 @@
-module OutToCanvas(putMessageG,putMessageT,makeChoiceMessage,putGrid,putMoziCl
+module OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl
                   ,clearMessage,putMozi) where
 
 import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate
@@ -8,6 +8,7 @@ import Control.Monad (when)
 import Define (iy,imx,igx,wg,hg,wt,ht,cvH,cvT,nfs,rfs,State(..),Play(..),Grid,Pos,Mode(..),Msg,Fsize)
 import Browser(chColors)
 import Event(makeEvent)
+import Action(makeChoiceMessage)
 import Libs(getInside)
 
 putMessageG :: Canvas -> State -> IO State
@@ -70,23 +71,6 @@ addRubi _ [] = []
 addRubi mc msg
   | msg!!mc=='：' = take (mc+1) msg
   | otherwise = addRubi (mc+1) msg
-
-makeChoiceMessage :: Msg -> [String] -> Int -> Msg 
-makeChoiceMessage omsg dlgs cn = let ndlgs = makeDialogs dlgs cn
-                                  in omsg ++ "\n\n" ++ concatMap (++"\n\n") ndlgs
-
-makeDialogs :: [String] -> Int -> [String]
-makeDialogs dlgs cn = makeDialogs' dlgs cn 0
-  where makeDialogs' [] _ _ = []
-        makeDialogs' (x:xs) cn i 
-          |cn==i =  if head x=='*' then (' ':x):nmd else ('*':x):nmd
-          |head x=='*' = (' ':tail x):nmd
-          |otherwise = (' ':x):nmd
-                       where nmd = makeDialogs' xs cn (i+1)
-
---putMessage :: Canvas -> Pos -> Msg -> IO ()
---putMessage _ _ [] = return ()
---putMessage c (p,q) msg = putMozi c (head chColors) (p,q) msg 
 
 putMessageT :: Canvas -> Pos -> String -> IO ()
 putMessageT c (p,q) = putLetters c 0 q (p,q) 
