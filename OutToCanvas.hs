@@ -84,9 +84,9 @@ makeDialogs dlgs cn = makeDialogs' dlgs cn 0
           |otherwise = (' ':x):nmd
                        where nmd = makeDialogs' xs cn (i+1)
 
-putMessage :: Canvas -> Pos -> Msg -> IO ()
-putMessage _ _ [] = return ()
-putMessage c (p,q) msg = putMozi c (head chColors) (p,q) msg 
+--putMessage :: Canvas -> Pos -> Msg -> IO ()
+--putMessage _ _ [] = return ()
+--putMessage c (p,q) msg = putMozi c (head chColors) (p,q) msg 
 
 putMessageT :: Canvas -> Pos -> String -> IO ()
 putMessageT c (p,q) = putLetters c 0 q (p,q) 
