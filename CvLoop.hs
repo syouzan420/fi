@@ -8,8 +8,8 @@ import Stages(stages,players,initPos,gridSize,idef,evts)
 import FiFunc(funcPon,stagePon,doNothing)
 import Grid
 import Messages
-import Browser 
-import OutToCanvas
+import Browser(chColors,clFields,flToKc,fields)
+import OutToCanvas(putMessageG,putMessageT,makeChoiceMessage,putGrid,putMoziCl,clearMessage,putMozi)
 import Check(checkDef,checkEq,checkEv,getMessage)
 import Siki
 import Libs(getIndex,getRandomNumIO,getRandomNum)
@@ -173,42 +173,37 @@ skipMessage c st = do
                              else skipMessage c st'
 
 inputLoop :: Canvas -> Int -> State -> IO State 
-inputLoop c kc st = do
-  if ini st then return st else
-    if ims st && not (imp st) then skipMessage c st{ini=True} else
-      if imp st then do
-        if ich st then do
+inputLoop c kc st
+  | iniSt = return st
+  | imsSt && not impSt = skipMessage c st{ini=True} 
+  | impSt = do 
+      if ichSt then do
           print "choice"
           let i = keyCodeToChar kc
-              (wd,hi) = sz st
+              (wd,hi) = szSt
               (dlgs,mnas) = unzip (chd st)
               cn = chn st
               ncn = keyChoice (length dlgs - 1) cn i
-          if ncn == (-1) then do 
-                              let nmsg = getMessage (mnas!!cn)
-                              clearMessage c st
-                              return st{msg=nmsg,ims=True,ich=False, imp=False}
-                         else
-            if ncn == (-2) then return st
-                           else do
-                               let cmsg = makeChoiceMessage (msg st) dlgs ncn 
-                               clearMessage c st
-                               putMessageT c (imx+ msc st,iy+hi+3) cmsg
-                               return st{chn=ncn}
-                    else return st{imp=False}
-                  else do
-      let p = player st
-      print (evt st)
-      print (ecs st)
-      print (mem st)
-      print (elg p)
-      print (isc p)
-      print (ich st)
-      print (jps st)
-      (_,nrg) <- getRandomNumIO (5,rgn p)
+          case ncn of
+            (-1) -> do 
+                      let nmsg = getMessage (mnas!!cn)
+                      clearMessage c st
+                      return st{msg=nmsg,ims=True,ich=False, imp=False}
+            (-2) -> return st
+            _    -> do
+                      let cmsg = makeChoiceMessage (msg st) dlgs ncn 
+                      clearMessage c st
+                      putMessageT c (imx+ msc st,iy+hi+3) cmsg
+                      return st{chn=ncn}
+                else return st{imp=False}
+  |otherwise = do
+      let p@(Play xyP _ _ _ _ rgnP elgP _ iscP) = player st
+      sequence_ [print (evt st),print (ecs st), print (mem st),print elgP,print iscP
+                ,print ichSt,print (jps st)]
+      (_,nrg) <- getRandomNumIO (5,rgnP)
       let i = keyCodeToChar kc 
-          (x,y) = xy p 
-          (wd,hi) = sz st
+          (x,y) = xyP 
+          (wd,hi) = szSt
           (x',y') = keyCheck (wd,hi) (x,y) i
           p' = plMove (x',y') p
           (tx,ty) = xy p'
@@ -225,14 +220,15 @@ inputLoop c kc st = do
          if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
                         else putMozi c (chColors!!2) pxy [pl p'']
          return nst
+           where iniSt = ini st; impSt = imp st; imsSt = ims st; ichSt = ich st; szSt = sz st
 
-showLog :: Canvas -> String -> IO ()
-showLog c log = do
-   let els = divStr 25 log 
-       divStr i str
-         | length str<=i = [str]
-         | otherwise = take i str:divStr i (drop i str)
-   mapM_ (\(el,i) -> putMozi c (chColors!!1) (1,30+i) el) (zip els [0,1..])
+--showLog :: Canvas -> String -> IO ()
+--showLog c log = do
+--   let els = divStr 25 log 
+--       divStr i str
+--         | length str<=i = [str]
+--         | otherwise = take i str:divStr i (drop i str)
+--   mapM_ (\(el,i) -> putMozi c (chColors!!1) (1,30+i) el) (zip els [0,1..])
 
 nextStage :: Canvas -> State -> IO State 
 nextStage c st = do

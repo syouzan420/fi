@@ -1,11 +1,12 @@
-module OutToCanvas where
+module OutToCanvas(putMessageG,putMessageT,makeChoiceMessage,putGrid,putMoziCl
+                  ,clearMessage,putMozi) where
 
-import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate,
-                             text,render,renderOnTop)
+import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate
+                            ,text,render,renderOnTop)
 import Haste.DOM (fromElem,elemById)
 import Control.Monad (when)
 import Define (iy,imx,igx,wg,hg,wt,ht,cvH,cvT,nfs,rfs,State(..),Play(..),Grid,Pos,Mode(..),Msg,Fsize)
-import Browser 
+import Browser(chColors)
 import Event(makeEvent)
 import Libs(getInside)
 
