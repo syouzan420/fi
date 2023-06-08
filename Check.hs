@@ -5,7 +5,7 @@ import Stages
 import Messages(msgs)
 import Libs (isNum,isChar,getIndex,sepByChar)
 import Grid
-import Siki
+import Siki (siki)
 
 checkDef :: Int -> [(Def,Int)] -> Grid -> [Def]
 checkDef stn df grid =

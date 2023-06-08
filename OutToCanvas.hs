@@ -5,19 +5,21 @@ import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate
                             ,text,render,renderOnTop)
 import Haste.DOM (fromElem,elemById)
 import Control.Monad (when)
-import Define (iy,imx,igx,wg,hg,wt,ht,cvH,cvT,nfs,rfs,State(..),Play(..),Grid,Pos,Mode(..),Msg,Fsize)
+import Define (iy,wg,hg,wt,ht,cvT,nfs,rfs,State(..),Play(..),CInfo,Grid,Pos,Mode(..),Msg,Fsize)
 import Browser(chColors)
 import Event(makeEvent)
 import Action(makeChoiceMessage)
 import Libs(getInside)
 
-putMessageG :: Canvas -> State -> IO State
-putMessageG c st = do
+putMessageG :: Canvas -> CInfo -> State -> IO State
+putMessageG c ((cvW,cvH),_) st = do
     if ims st && not (imp st) then do
           let ms = msg st
               mc = mct st
               ml = length ms-1 
               (_,h) = sz st
+              imx = floor (cvW/wt) - 1
+              igx = floor (cvW/wg) - 2
               iq = iy+h+3
               (p,q) = if mc==0 then (imx,iq) else mps st
               tmsg = take (mc+1) ms 
@@ -44,7 +46,7 @@ putMessageG c st = do
               npos
                 |irb = (p,q)
                 |ir = (p-1,iq)
-                |otherwise = nextPQ iq (p,q) 
+                |otherwise = nextPQ cvH iq (p,q) 
               iscx = fst npos==1 && fst npos/=p
               nst = if isc then makeEvent scr st{imp=ip} else st{imp=ip}
               scx = if mc==0 then 0 else msc nst
@@ -57,11 +59,11 @@ putMessageG c st = do
                  else if isc then when (ich nst) $ do
                                       let (dlgs,_) = unzip (chd nst)
                                           cmsg = makeChoiceMessage (msg nst) dlgs (chn nst) 
-                                      clearMessage c nst
-                                      putMessageT c (imx+scx,iq) cmsg
+                                      clearMessage c igx nst
+                                      putMessageT c cvH (imx+scx,iq) cmsg
                              else if iscx then do 
-                                      clearMessage c nst
-                                      putMessageT c (imx+scx+1,iq) (take (mc+1) ms)
+                                      clearMessage c igx nst
+                                      putMessageT c cvH (imx+scx+1,iq) (take (mc+1) ms)
                                           else putLet c col nfs 0 (p,q) ch 
           return nst{ims=nims,mct=nmct,mps=npos',mcl=cln,msc=nmsc}
                 else return st
@@ -72,17 +74,17 @@ addRubi mc msg
   | msg!!mc=='：' = take (mc+1) msg
   | otherwise = addRubi (mc+1) msg
 
-putMessageT :: Canvas -> Pos -> String -> IO ()
-putMessageT c (p,q) = putLetters c 0 q (p,q) 
+putMessageT :: Canvas -> Double -> Pos -> String -> IO ()
+putMessageT c cvH (p,q) = putLetters c cvH 0 q (p,q) 
 
-putLetters :: Canvas -> Int -> Int -> Pos -> String -> IO ()
-putLetters _ _ _ _ [] = return ()
-putLetters c cln iq (p,q) (x:xs) = do
+putLetters :: Canvas -> Double -> Int -> Int -> Pos -> String -> IO ()
+putLetters _ _ _ _ _ [] = return ()
+putLetters c cvH cln iq (p,q) (x:xs) = do
   case x of 
-    '{'   -> putNothing c cln iq (p,q) xs
-    '：'  -> putRubi c cln iq (if iq==q then p+1 else p,if iq==q then eq else q-1) xs
+    '{'   -> putNothing c cvH cln iq (p,q) xs
+    '：'  -> putRubi c cvH cln iq (if iq==q then p+1 else p,if iq==q then eq else q-1) xs
                 where eq = floor ((cvH-cvT)/ht)
-    '\n'  -> putLetters c 0 iq (p-1,iq) xs
+    '\n'  -> putLetters c cvH 0 iq (p-1,iq) xs
     _     -> do let lt = case x of '、' -> '@'; '。' -> '@'; '*' -> '@';  _ -> x
                     ncln = case x of
                              '「' -> 1
@@ -90,31 +92,31 @@ putLetters c cln iq (p,q) (x:xs) = do
                              _    -> cln
                     col = chColors!!ncln
                 when (lt/='@') $ putLet c col nfs 0 (p,q) lt 
-                let (p',q') = nextPQ iq (p,q)
-                putLetters c ncln iq (p',q') xs
+                let (p',q') = nextPQ cvH iq (p,q)
+                putLetters c cvH ncln iq (p',q') xs
 
-putNothing :: Canvas -> Int -> Int -> Pos -> String -> IO ()
-putNothing _ _ _ _ [] = return ()
-putNothing c cln iq (p,q) (x:xs) = do
+putNothing :: Canvas -> Double -> Int -> Int -> Pos -> String -> IO ()
+putNothing _ _ _ _ _ [] = return ()
+putNothing c cvH cln iq (p,q) (x:xs) = do
   case x of
-    '}' -> do let (p',q') = nextPQ iq (p,q)
-              putLetters c cln iq (p',q') xs
-    _   -> putNothing c cln iq (p,q) xs
+    '}' -> do let (p',q') = nextPQ cvH iq (p,q)
+              putLetters c cvH cln iq (p',q') xs
+    _   -> putNothing c cvH cln iq (p,q) xs
 
-nextPQ :: Int -> Pos -> Pos
-nextPQ iq (p,q)
+nextPQ :: Double -> Int -> Pos -> Pos
+nextPQ cvH iq (p,q)
   | (fromIntegral q+1)*ht > cvH - cvT = (p-1,iq)
   | otherwise = (p,q+1)
 
-putRubi :: Canvas -> Int -> Int -> Pos -> String -> IO ()
-putRubi c cln iq (p,q) = pRubi c iq 0 (p,q)
+putRubi :: Canvas -> Double -> Int -> Int -> Pos -> String -> IO ()
+putRubi c cvH cln iq (p,q) = pRubi c iq 0 (p,q)
   where
     col = chColors!!cln
     pRubi _ _ _ _ [] = return ()
     pRubi c iq rd (p,q) (x:xs) = do
       case x of
-        '：' -> let (p',q')=nextPQ iq (p,q)
-                 in putLetters c cln iq (p',q') xs
+        '：' -> let (p',q')=nextPQ cvH iq (p,q)
+                 in putLetters c cvH cln iq (p',q') xs
         _    -> do putLet c col rfs rd (p,q) x 
                    pRubi c iq (rd+1) (p,q) xs
 
@@ -135,8 +137,8 @@ putMoziCl :: Canvas -> IO ()
 putMoziCl c = do
   render c $ text (0,0) "" 
 
-clearMessage :: Canvas -> State -> IO ()
-clearMessage c st = do
+clearMessage :: Canvas -> Int -> State -> IO ()
+clearMessage c igx st = do
   putMoziCl c
   let p = player st 
       (wd,_) = sz st

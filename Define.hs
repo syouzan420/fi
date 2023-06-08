@@ -15,6 +15,8 @@ type Def = (String,Integer) -- "String"=Integer
 type Msg = String
 type Evt = (String,String)    --(Triger Event, Target Event)
 type Mem = (String,String)    --memory (for event trigger)
+type CInfo = ((Double,Double),(Double,Double)) 
+    -- canvasWidth, canvasHeight, clientRectWidth, clientRectHeight
 
 -- Fr: Free(can have) Bl: Block Ex: Exist(can't have) Mv: can push
 -- Pn: Pon(function argument) Wn: Wander(random move) Cm: Come towards Player
@@ -58,8 +60,8 @@ data State = State {player:: !Play,
                     ch:: !Char       --optional
                    } deriving (Eq,Show)
 
-ix, iy :: Int
-ix = 10; iy = 2
+iy :: Int
+iy = 2
 
 wg, hg, wt, ht :: Double 
 wg = 16; hg = 20; wt = 28; ht = 20 -- grid width & height , tategaki letters width & height
@@ -67,9 +69,6 @@ wg = 16; hg = 20; wt = 28; ht = 20 -- grid width & height , tategaki letters wid
 nfs, rfs :: Int
 nfs = 20; rfs = 8 -- normal font size, rubi font size
 
-cvW, cvH, cvT :: Double
-cvW = 456; cvH = 567; cvT = 10  --canvas width, height, trim(yohaku)
-
-imx, igx :: Int 
-imx = floor (cvW/wt)-1; igx = floor (cvW/wg)-2
+cvT :: Double
+cvT = 10  --trim(yohaku)
 
