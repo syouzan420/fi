@@ -1,6 +1,6 @@
 module Event (makeEvent) where
 
-import Define (State(..),Play(..),Mode(..))
+import Define (State(..),Switch(..),Play(..),Mode(..))
 import Grid(changeGridType,intoGrid,clFromGrid)
 import Libs(sepByChar,getIndex,concatWith)
 
@@ -76,7 +76,7 @@ makeDecision (m:c:xs) st
         fsst = if null fs then st else makeEvent (head fs) st
 
 makeChoice :: [String] -> State -> State
-makeChoice [] st = st{ich=True,imp=True}
+makeChoice [] st = st{swc=(swc st){ich=True,imp=True}}
 makeChoice (x:xs) st = let (c:d:_) = sepByChar ',' x 
                         in makeChoice xs st{chd=chd st++[(c,d)]}
 

@@ -49,16 +49,18 @@ data State = State {player:: !Play,
                     jps:: !Int,     -- Stage Number when Jump Stage
                     chd:: ![(String,String)],  -- Choice Data (Choice Sentence, Target Msg)
                     chn:: !Int,     -- Choice Number
-                    ils:: !Bool,    -- Leave Stage?
-                    igc:: !Bool,    -- Game Clear?
-                    ims:: !Bool,     -- Message Show?
-                    imp:: !Bool,     -- Message Pause?
-                    itc:: !Bool,     -- Touch Is True?
-                    ini:: !Bool,     -- No Input?
-                    ich:: !Bool,     -- Choice Mode?
-                    db:: !String,    --for debug
-                    ch:: !Char       --optional
+                    swc:: !Switch,
+                    db:: !String    --for debug
                    } deriving (Eq,Show)
+
+data Switch = Switch { ils:: !Bool,    -- Leave Stage?
+                       igc:: !Bool,    -- Game Clear?
+                       ims:: !Bool,     -- Message Show?
+                       imp:: !Bool,     -- Message Pause?
+                       itc:: !Bool,     -- Touch Is True?
+                       ini:: !Bool,     -- No Input?
+                       ich:: !Bool    -- Choice Mode?
+                     } deriving (Eq, Show)
 
 iy :: Int
 iy = 2

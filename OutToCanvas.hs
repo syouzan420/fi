@@ -5,7 +5,8 @@ import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate
                             ,text,render,renderOnTop)
 import Haste.DOM (fromElem,elemById)
 import Control.Monad (when)
-import Define (iy,wg,hg,wt,ht,cvT,nfs,rfs,State(..),Play(..),CInfo,Grid,Pos,Mode(..),Msg,Fsize)
+import Define (iy,wg,hg,wt,ht,cvT,nfs,rfs,State(..),Play(..),Switch(..),CInfo,Grid,Pos
+              ,Mode(..),Msg,Fsize)
 import Browser(chColors)
 import Event(makeEvent)
 import Action(makeChoiceMessage)
@@ -13,7 +14,8 @@ import Libs(getInside)
 
 putMessageG :: Canvas -> CInfo -> State -> IO State
 putMessageG c ((cvW,cvH),_) st = do
-    if ims st && not (imp st) then do
+    let sw = swc st
+    if ims sw && not (imp sw) then do
           let ms = msg st
               mc = mct st
               ml = length ms-1 
@@ -23,11 +25,11 @@ putMessageG c ((cvW,cvH),_) st = do
               iq = iy+h+3
               (p,q) = if mc==0 then (imx,iq) else mps st
               tmsg = take (mc+1) ms 
-              lmsg = last tmsg
+              lmsg = if null tmsg then ' ' else last tmsg
               ch = case lmsg of '、' -> ' '; '。' -> ' '; '}' -> ' ';  _ -> lmsg 
               ic = ch=='「'
               ir = ch=='\n'
-              ip = lmsg=='。'
+              ip = lmsg=='。' 
               irb = ch=='：'
               isc = ch=='{'
               cln
@@ -48,7 +50,8 @@ putMessageG c ((cvW,cvH),_) st = do
                 |ir = (p-1,iq)
                 |otherwise = nextPQ cvH iq (p,q) 
               iscx = fst npos==1 && fst npos/=p
-              nst = if isc then makeEvent scr st{imp=ip} else st{imp=ip}
+              nst = if isc then makeEvent scr st{swc=sw{imp=ip}} else st{swc=sw{imp=ip}}
+              nsw = swc nst
               scx = if mc==0 then 0 else msc nst
               npos' = if iscx then (p,iq) else npos
               nmsc = if iscx then scx+1 else scx
@@ -56,23 +59,22 @@ putMessageG c ((cvW,cvH),_) st = do
               p' = if iq==q then p+1 else p
               q' = if iq==q then eq else q-1
           if irb then mapM_ (\(ch,rd) -> putLet c col rfs rd (p',q') ch) (zip rbs [0,1..]) 
-                 else if isc then when (ich nst) $ do
-                                      let (dlgs,_) = unzip (chd nst)
-                                          cmsg = makeChoiceMessage (msg nst) dlgs (chn nst) 
-                                      clearMessage c igx nst
-                                      putMessageT c cvH (imx+scx,iq) cmsg
-                             else if iscx then do 
-                                      clearMessage c igx nst
-                                      putMessageT c cvH (imx+scx+1,iq) (take (mc+1) ms)
-                                          else putLet c col nfs 0 (p,q) ch 
-          return nst{ims=nims,mct=nmct,mps=npos',mcl=cln,msc=nmsc}
-                else return st
-
-addRubi :: Int -> String -> String
-addRubi _ [] = []
-addRubi mc msg
-  | msg!!mc=='：' = take (mc+1) msg
-  | otherwise = addRubi (mc+1) msg
+                 else do
+                   let itp0 = isc && ich nsw
+                       itp1 = not isc && iscx
+                       msg'
+                        | itp0 = let (dlgs,_) = unzip (chd nst)
+                                  in makeChoiceMessage (msg nst) dlgs (chn nst) 
+                        | itp1 = take (mc+1) ms
+                        | otherwise = ""
+                       posx
+                        | itp0 = imx+scx
+                        | itp1 = imx+scx+1
+                        | otherwise = 0
+                   when (itp0||itp1) $ clearMessage c igx nst >> putMessageT c cvH (posx,iq) msg'
+                   when (not isc && not iscx) $ putLet c col nfs 0 (p,q) ch
+          return nst{mct=nmct,mps=npos',mcl=cln,msc=nmsc,swc=nsw{ims=nims}}
+    else return st
 
 putMessageT :: Canvas -> Double -> Pos -> String -> IO ()
 putMessageT c cvH (p,q) = putLetters c cvH 0 q (p,q) 
@@ -172,5 +174,5 @@ putLet c col fs rd (x,y) ch = do
             ext = if irt then nfsd/6*5 else 0
             
 rtChar :: Char -> Bool
-rtChar ch = (cp>31 && cp<128)||(ch `elem` "ー〜。「＜＞") 
+rtChar ch = (cp>31 && cp<128)||(ch `elem` "ー〜。「＜＞（）") 
   where cp = fromEnum ch

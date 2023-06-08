@@ -1,7 +1,7 @@
 module Action(initState,keyCodeToChar,keyChoice,keyCheck,putOut,plMove
              ,makeChoiceMessage) where
 
-import Define(State(..),Play(..),Mode(..),Dir(..),Pos,Size,Grid,Msg)
+import Define(State(..),Play(..),Switch(..),Mode(..),Dir(..),Pos,Size,Grid,Msg)
 import Stages(stages,players,initPos,gridSize,idef,evts)
 import FiFunc(funcPon,stagePon,doNothing)
 import Grid(intoGrid,fromGrid,sizeGrid,makeGrid)
@@ -12,15 +12,18 @@ import Libs(getIndex,getRandomNum)
 initState :: State
 initState = State {player=initPlayer,sz=igs,msg=initMsg,evt=evts,
                    ecs=replicate (length evts) 0,mem=[],
-                   mps=(0,0),mct=0,mcl=0,msc=0,jps= -1,chd=[],chn=0,
-                   ils=False,igc=False,ims=True,imp=False,itc=False,ini=False,
-                   ich=False,db="",ch=' '}
+                   mps=(0,0),mct=0,mcl=0,msc=0,jps= -1,chd=[],chn=0,swc=initSwitch,
+--                   ils=False,igc=False,ims=True,imp=False,itc=False,ini=False,ich=False,
+                   db=""}
                      where igs = head gridSize
 
 initPlayer :: Play
 initPlayer = Play {xy=head initPos,gr=makeGrid igs (head stages),pl=head players,et=' ',
                    sn=0,rgn=0,elg="",iw=False,isc=False}
                      where igs = head gridSize
+
+initSwitch :: Switch
+initSwitch = Switch {ils=False,igc=False,ims=True,imp=False,itc=False,ini=False,ich=False}
 
 keyCheck :: Size -> Pos -> Char -> Pos 
 keyCheck (wd,hi) (x,y) ch  

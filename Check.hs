@@ -1,6 +1,6 @@
 module Check (checkDef,checkEq,checkEv,trEvent,getMessage) where
 
-import Define (Grid,Def,Evt,State(..),Play(..),Mode(Fr))
+import Define (Grid,Def,Evt,State(..),Play(..),Switch(..),Mode(Fr))
 import Stages 
 import Messages(msgs)
 import Libs (isNum,isChar,getIndex,sepByChar)
@@ -110,18 +110,18 @@ trEvent i ev@(e:es) st =
                      nevt = if iend then delFrom i evn else insTo i (t,e:nes) evn
                      necs = if iend then delFrom i cs else insTo i nc cs
                      nmsg = getMessage na
-                  in st{msg=nmsg,ims=True,evt=nevt,ecs=necs}
+                  in st{msg=nmsg,evt=nevt,ecs=necs,swc=sw{ims=True}}
           'r' -> let stn = sn p 
                      igs = gridSize!!stn
                      ecs' = map (*0) cs 
                      np = p{xy=initPos!!stn,gr=makeGrid igs (stages!!stn),
                             pl=players!!stn,et=' ',sn=stn}
-                  in st{sz=igs,player=np,ecs=ecs',msg=getMessage "msgR",ims=True}
+                  in st{sz=igs,player=np,ecs=ecs',msg=getMessage "msgR",swc=sw{ims=True}}
           'w' -> let igs = head gridSize
                      ecs' = map (*0) cs 
                      np = p{xy=head initPos,gr=makeGrid igs (head stages),pl=head players,
                             et=' ',sn=0}
-                  in st{sz=igs,player=np,ecs=ecs',msg=getMessage "msgW",ims=True}
+                  in st{sz=igs,player=np,ecs=ecs',msg=getMessage "msgW",swc=sw{ims=True}}
           't' -> let (nc,na,_) = evRead c es
                      iend = nc==0
                      tg = if iend then na else ""
@@ -139,15 +139,16 @@ trEvent i ev@(e:es) st =
                             else if head es=='l' then 
                                 let nevt = delFrom i evn
                                     necs = delFrom i cs
-                                 in st{jps=read (tail es)::Int,ils=True,evt=nevt,ecs=necs}
+                                 in st{jps=read (tail es)::Int,evt=nevt,ecs=necs,swc=sw{ils=True}}
                                                  else st{jps=read es::Int}      -- Jump Stage
           'l' -> let nevt = delFrom i evn
                      necs = delFrom i cs
-                  in st{ils=True,evt=nevt,ecs=necs}               -- Leave Stage
+                  in st{evt=nevt,ecs=necs,swc=sw{ils=True}}               -- Leave Stage
           _   -> st
    in st'{player=(player st'){elg=elg p++ev}}
   where p = player st
         evn = evt st
+        sw = swc st
 
 insTo :: Int -> a -> [a] -> [a]
 insTo id elm lst = take id lst ++ [elm] ++ drop (id+1) lst

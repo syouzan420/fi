@@ -6,7 +6,7 @@ import Haste.Events (onEvent,preventDefault,KeyEvent(..),KeyData(..))
 import Haste.Graphics.Canvas(Canvas,Color(RGB),Rect(..))
 import Haste.DOM (document)
 import Haste.Foreign (ffi)
-import Define (State(itc),CInfo)
+import Define (State(swc),Switch(itc),CInfo)
 
 chColors :: [Color]
 chColors = [RGB 0 0 0,RGB 255 204 153,RGB 255 153 204,RGB 153 255 255] 
@@ -51,11 +51,11 @@ fields (w,h) = [Rect 0 100 100 (h-100)
                ,Rect 100 100 (w-200) (h-200)]
 
 tcStart :: State -> IO State
-tcStart st = if itc st then preventDefault >> return st
-                       else return st
+tcStart st = if itc (swc st) then preventDefault >> return st
+                             else return st
 
 tcEnd :: State -> IO State
-tcEnd st = return st{itc=False}
+tcEnd st = return st{swc=(swc st){itc=False}}
 
 touchIsTrue :: State -> IO State
-touchIsTrue st = return st{itc=True}
+touchIsTrue st = return st{swc=(swc st){itc=True}}

@@ -15,7 +15,7 @@ map3 :: Stage
 map3 = [((1,0),('D',Bl)),((4,1),('A',Bl)),((2,2),('B',Bl)),((0,6),('0',Bl))]
 
 map4 :: Stage
-map4 = [((6,1),('E',Bl)),((0,7),('0',Bl))]
+map4 = [((4,1),('F',Bl)),((6,1),('E',Bl)),((0,7),('0',Bl))]
 
 stages :: [Stage]
 stages = [map0,map1,map2,map3,map4]

@@ -3,7 +3,7 @@ module CvLoop (initiate,inputLoop,mouseClick) where
 import Haste.Graphics.Canvas(Canvas)
 import Haste.Audio
 import Control.Monad(unless)
-import Define(State(..),Play(..),Mode(..),CInfo,iy,wg,wt)
+import Define(State(..),Play(..),Switch(..),Mode(..),CInfo,iy,wg,wt)
 import Stages(stages,players,initPos,gridSize)
 import Grid(checkGrid,makeGrid)
 import Browser(chColors,clFields,flToKc,fields,cvRatio)
@@ -34,13 +34,14 @@ mouseClick c ci x y = do
 skipMessage :: Canvas -> CInfo -> State -> IO State
 skipMessage c ci st = do
   st' <- putMessageG c ci st
-  if imp st' || not (ims st) then return st'{ini=False}
-                             else skipMessage c ci st'
+  let sw' = swc st'
+  if imp sw' || not (ims (swc st)) then return st'{swc=sw'{ini=False}}
+                                   else skipMessage c ci st'
 
 inputLoop :: Canvas -> CInfo -> Int -> State -> IO State 
 inputLoop c ci@((cvW,cvH),_) kc st
   | iniSt = return st
-  | imsSt && not impSt = skipMessage c ci st{ini=True} 
+  | imsSt && not impSt = skipMessage c ci st{swc=sw{ini=True}} 
   | impSt = do 
       if ichSt then do
           print "choice"
@@ -53,14 +54,14 @@ inputLoop c ci@((cvW,cvH),_) kc st
             (-1) -> do 
                       let nmsg = getMessage (mnas!!cn)
                       clearMessage c igx st
-                      return st{msg=nmsg,ims=True,ich=False, imp=False}
+                      return st{msg=nmsg,swc=sw{ims=True,ich=False,imp=False}}
             (-2) -> return st
             _    -> do
                       let cmsg = makeChoiceMessage (msg st) dlgs ncn 
                       clearMessage c igx st
                       putMessageT c cvH (imx+ msc st,iy+hi+3) cmsg
                       return st{chn=ncn}
-                else return st{imp=False}
+                else return st{swc=sw{imp=False}}
   |otherwise = do
       let p@(Play xyP _ _ _ _ rgnP elgP _ iscP) = player st
       sequence_ [print (evt st),print (ecs st), print (mem st),print elgP,print iscP
@@ -77,17 +78,19 @@ inputLoop c ci@((cvW,cvH),_) kc st
           (px',py') = (tx+1,ty+iy+1)
           p'' = if i==' ' then putOut p' else p'
           nst = checkEv 0 (elg p'') (evt st) st{player=p''{rgn=nrg}}
+          nsw = swc nst
           (wd',_) = sz nst
           ix' = igx-wd'
       putGrid c (ix',iy) (gr (player nst))
-      unless (ims nst) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
-      if ils nst || i=='n' then nextStage c ci nst{ims=False} 
+      unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
+      if ils nsw || i=='n' then nextStage c ci nst{swc=nsw{ims=False}} 
                            else do
          let pxy = (px'+ix,py')
          if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
                                  else putMozi c (chColors!!2) pxy [pl p'']
          return nst
-           where iniSt = ini st; impSt = imp st; imsSt = ims st; ichSt = ich st; szSt = sz st
+           where sw = swc st
+                 iniSt = ini sw; impSt = imp sw; imsSt = ims sw; ichSt = ich sw; szSt = sz st
                  imx = floor (cvW/wt) - 1; igx = floor (cvW/wg) - 2
 
 --showLog :: Canvas -> String -> IO ()
@@ -113,7 +116,7 @@ nextStage c ci st = do
               iwn=checkGrid (' ',Wn) grid
               np = p{xy=initPos!!nsn, gr=grid, pl=players!!nsn, et=' ',sn=nsn,
                      elg=nlg,isc=False,iw=iwn}
-          inputLoop c ci 64 st{sz=nsz,player=np,msg="",jps = -1,ils=False,igc=False}
+          inputLoop c ci 64 st{sz=nsz,player=np,msg="",jps = -1,swc=(swc st){ils=False,igc=False}}
 
 gameClear :: Canvas -> State -> IO State 
 gameClear c st = do putMoziCl c
@@ -128,5 +131,5 @@ gameClear c st = do putMoziCl c
                         p = player st
                         np=p{xy = head initPos, gr=makeGrid nsz (head stages),
                              pl=head players,et=' ',sn=0,elg="",isc=False}
-                    return st{sz=nsz,player=np,igc=False}
+                    return st{sz=nsz,player=np,swc=(swc st){igc=False}}
 
