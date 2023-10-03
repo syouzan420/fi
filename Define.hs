@@ -25,6 +25,8 @@ data Mode = Fr | Bl | Ex | Mv | Pn | Wn | Cm | DB | DF deriving (Eq,Show)
 
 data Dir = Up | Dw | Lf | Rt | Cn deriving (Eq,Show)
 
+data LSA = Save | Load | Remv deriving (Eq,Show)  -- local storage actions 
+
 data Play = Play {xy:: !Pos,
                   gr:: !Grid,         
                   pl:: !Char,           -- Player Appearance

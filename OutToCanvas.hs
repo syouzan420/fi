@@ -155,12 +155,12 @@ putMozi :: Canvas -> Color -> Pos -> String -> IO ()
 putMozi c col (x,y) str = do
   let (px,py) = (fromIntegral x,fromIntegral y)
   renderOnTop c $ do
-    mapM_ (\(ch,n)->color col$font (show nfs++"px Unifont")$
+    mapM_ (\(ch,n)->color col$font (show nfs++"px Courier")$
       text (px*wg+wg*n,py*hg) [ch]) (zip str [0..]) 
 
 putLet :: Canvas -> Color -> Fsize -> Double -> Pos -> Char -> IO ()
 putLet c col fs rd (x,y) ch = do
-  renderOnTop c $ color col$font (show fs++"px VL Gothic")$
+  renderOnTop c $ color col$font (show fs++"px IPAGothic")$
     translate (px+ex,py-ext)$rotate rta$text (0,0) [ch]
       where irt = rtChar ch
             (p,q) = (fromIntegral x,fromIntegral y)

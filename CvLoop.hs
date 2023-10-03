@@ -3,13 +3,14 @@ module CvLoop (initiate,inputLoop,mouseClick) where
 import Haste.Graphics.Canvas(Canvas)
 import Haste.Audio
 import Control.Monad(unless)
-import Define(State(..),Play(..),Switch(..),Mode(..),CInfo,iy,wg,wt)
+import Data.List(intercalate)
+import Define(State(..),Play(..),Switch(..),Mode(..),LSA(..),CInfo,iy,wg,wt)
 import Stages(stages,players,initPos,gridSize)
 import Grid(checkGrid,makeGrid)
-import Browser(chColors,clFields,flToKc,fields,cvRatio)
+import Browser(chColors,clFields,flToKc,fields,cvRatio,localStore,stringToJson)
 import OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl,clearMessage,putMozi)
 import Check(checkEv,getMessage)
-import Libs(getRandomNumIO)
+import Libs(getRandomNumIO,sepByChar)
 import Action(initState,keyCodeToChar,keyChoice,keyCheck,putOut,plMove,makeChoiceMessage)
 
 initiate :: Canvas -> CInfo -> IO State 
@@ -82,24 +83,63 @@ inputLoop c ci@((cvW,cvH),_) kc st
           (wd',_) = sz nst
           ix' = igx-wd'
       putGrid c (ix',iy) (gr (player nst))
-      unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
-      if ils nsw || i=='n' then nextStage c ci nst{swc=nsw{ims=False}} 
+      --unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
+      --print (stringToJson (makeSaveData st)) 
+      sData <- if i=='s' then localStore Save "savedata" (makeSaveData st) 
+          else if i=='r' then localStore Load "savedata" ""
+          else if i=='d' then localStore Remv "savedata" ""
+                         else return "-----"
+      nst' <- if i=='r' && sData/="loadError" then loadState c ci sData nst else return nst
+      print sData
+      if ils nsw || i=='n' then nextStage c ci nst'{swc=nsw{ims=False}} 
                            else do
          let pxy = (px'+ix,py')
-         if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
-                                 else putMozi c (chColors!!2) pxy [pl p'']
-         return nst
+         if et (player nst')==' ' then putMozi c (chColors!!1) pxy [pl p'']
+                                  else putMozi c (chColors!!2) pxy [pl p'']
+         return nst'
            where sw = swc st
                  iniSt = ini sw; impSt = imp sw; imsSt = ims sw; ichSt = ich sw; szSt = sz st
                  imx = floor (cvW/wt) - 1; igx = floor (cvW/wg) - 2
 
---showLog :: Canvas -> String -> IO ()
---showLog c log = do
---   let els = divStr 25 log 
---       divStr i str
---         | length str<=i = [str]
---         | otherwise = take i str:divStr i (drop i str)
---   mapM_ (\(el,i) -> putMozi c (chColors!!1) (1,30+i) el) (zip els [0,1..])
+makeSaveData :: State -> String
+makeSaveData st =
+  let stageData = sn$player st
+      evtData = intercalate "," $ concatMap (\(tr,tg) -> [tr,tg]) (evt st)
+      ecsData = intercalate "," $ map show (ecs st)
+   in "\""++intercalate "~" [show stageData,evtData,ecsData]++"\""
+
+loadState :: Canvas -> CInfo -> String -> State -> IO State
+loadState _ _ "" st = return st
+loadState c ci str st = do
+  let dt = if head str=='\"' then tail$init str else str
+      dts = sepByChar '~' dt
+      nsn = read (head dts)
+      evtStr = dts!!1
+      nevt = listToTupples (sepByChar ',' evtStr)
+      ecsStr = dts!!2
+      necs = map read $ sepByChar ',' ecsStr
+      nsz = gridSize!!nsn
+      npl = players!!nsn
+      nxy = initPos!!nsn
+      ngr = makeGrid nsz (stages!!nsn)
+      nst = st{player=(player st){xy=nxy, gr=ngr, pl=npl, et=' ', sn=nsn},evt=nevt,ecs=necs}
+  update c ci nst 
+
+listToTupples :: [String] -> [(String,String)]
+listToTupples [] = []
+listToTupples [x] = []
+listToTupples (x:y:xs) = (x,y):listToTupples xs
+
+update :: Canvas -> CInfo -> State -> IO State 
+update c ((cvW,_),_) st = do
+  let (x,y)=(xy.player) st 
+      (wd,hi)=sz st 
+      (px,py)=(x+1,y+iy+1)
+      igx = floor (cvW/wg) - 2
+      ix = igx-wd
+  putGrid c (ix,iy) ((gr.player) st)
+  putMozi c (chColors!!1) (px+ix,py) [(pl.player) st] 
+  return st 
 
 nextStage :: Canvas -> CInfo -> State -> IO State 
 nextStage c ci st = do

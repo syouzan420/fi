@@ -1,15 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Browser (getCanvasInfo,chColors,cvRatio,clFields,flToKc,fields,
-                tcStart,tcEnd,touchIsTrue) where
+                tcStart,tcEnd,touchIsTrue,localStore,stringToJson) where
 
+import Haste(JSString)
 import Haste.Events (onEvent,preventDefault,KeyEvent(..),KeyData(..))
 import Haste.Graphics.Canvas(Canvas,Color(RGB),Rect(..))
 import Haste.DOM (document)
 import Haste.Foreign (ffi)
-import Define (State(swc),Switch(itc),CInfo)
+import Haste.JSON(JSON,encodeJSON,decodeJSON)
+import Haste.JSString(pack,unpack)
+import Haste.LocalStorage(setItem,getItem,removeItem)
+import Define (State(swc),Switch(itc),CInfo,LSA(..))
 
 chColors :: [Color]
-chColors = [RGB 0 0 0,RGB 255 204 153,RGB 255 153 204,RGB 153 255 255] 
+chColors = [RGB 200 255 200,RGB 255 204 153,RGB 255 153 204,RGB 153 255 255] 
 
 canvasW :: Canvas -> IO Double 
 canvasW = ffi "(function(cv){return cv.width})"
@@ -59,3 +63,20 @@ tcEnd st = return st{swc=(swc st){itc=False}}
 
 touchIsTrue :: State -> IO State
 touchIsTrue st = return st{swc=(swc st){itc=True}}
+
+localStore :: LSA -> String -> String -> IO String 
+localStore lsa name dt =
+  case lsa of
+    Save -> setItem (pack name) (stringToJson dt) >> return "saved"
+    Load -> do js <- getItem (pack name) :: IO (Either JSString JSON)
+               return (either loadError jsonToString js)
+    Remv -> removeItem (pack name) >> return "removed"
+
+loadError :: JSString -> String
+loadError js = "loadError"
+
+jsonToString :: JSON -> String
+jsonToString = unpack.encodeJSON 
+
+stringToJson :: String -> JSON
+stringToJson str = let (Right j) = (decodeJSON.pack) str in j

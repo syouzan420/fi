@@ -149,7 +149,9 @@ wnMove gen pos grid = wnMove' gen (0,0) grid pos grid
 
 keyCodeToChar :: Int -> Char
 keyCodeToChar kc = case kc of
-                     72 -> 'h';74 -> 'j';75 -> 'k';76 -> 'l';78 -> 'n';
+                     68 -> 'd';
+                     72 -> 'h'; 74 -> 'j'; 75 -> 'k'; 76 -> 'l'; 78 -> 'n';
+                     82 -> 'r'; 83-> 's';
                      _  -> toEnum kc
 
 makeChoiceMessage :: Msg -> [String] -> Int -> Msg 
