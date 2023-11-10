@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Browser (getCanvasInfo,chColors,cvRatio,clFields,flToKc,fields,
-                tcStart,tcEnd,touchIsTrue,localStore,stringToJson) where
+                tcStart,tcEnd,touchIsTrue,localStore,stringToJson,setBmps) where
 
 import Haste(JSString)
 import Haste.Events (onEvent,preventDefault,KeyEvent(..),KeyData(..))
-import Haste.Graphics.Canvas(Canvas,Color(RGB),Rect(..))
+import Haste.Graphics.Canvas(Canvas,Color(RGB),Rect(..),Bitmap,loadBitmap)
 import Haste.DOM (document)
 import Haste.Foreign (ffi)
 import Haste.JSON(JSON,encodeJSON,decodeJSON)
 import Haste.JSString(pack,unpack)
 import Haste.LocalStorage(setItem,getItem,removeItem)
-import Define (State(swc),Switch(itc),CInfo,LSA(..))
+import Define (State(swc),Switch(itc),CInfo,LSA(..),imgfile,wstfile)
 
 chColors :: [Color]
 chColors = [RGB 200 255 200,RGB 255 204 153,RGB 255 153 204,RGB 153 255 255] 
@@ -80,3 +80,13 @@ jsonToString = unpack.encodeJSON
 
 stringToJson :: String -> JSON
 stringToJson str = let (Right j) = (decodeJSON.pack) str in j
+
+loadImgs :: Int -> String -> [IO Bitmap]
+loadImgs (-1) str = []
+loadImgs i str = loadImgs (i-1) str ++ [loadBitmap (pack (str ++ show i ++".png"))]
+
+setBmps :: IO ([Bitmap],[Bitmap])
+setBmps = do
+  imgs <- sequence (loadImgs 5 imgfile)
+  wsts <- sequence (loadImgs 120 wstfile)
+  return (imgs,wsts)

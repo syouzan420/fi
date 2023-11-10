@@ -38,6 +38,7 @@ evaluate ops nms
   |otherwise = nms 
 
 siki :: [Def] -> String -> String
+siki _ "" = ""
 siki def str = let (nms,ops) = wake str
                    res = evaluate ops (makeNum def nms)
                 in if null res then str else show$last res

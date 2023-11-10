@@ -1,17 +1,17 @@
 module OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl
-                  ,clearMessage,putMozi) where
+                  ,clearMessage,putMozi,putWst) where
 
-import Haste.Graphics.Canvas(Canvas,Color(RGB),color,font,translate,rotate
-                            ,text,render,renderOnTop)
+import Haste.Graphics.Canvas(Canvas,Color(RGB),Bitmap,color,font,translate,rotate
+                            ,text,draw,scale,render,renderOnTop)
 import Haste.DOM (fromElem,elemById)
 import Control.Monad (when)
 import Define (iy,wg,hg,wt,ht,cvT,nfs,rfs,State(..),Play(..),Switch(..),CInfo,Grid,Pos
-              ,Mode(..),Msg,Fsize)
+              ,Mode(..),Msg,Fsize,wstIndex)
 import Browser(chColors)
 import Event(makeEvent)
 import Action(makeChoiceMessage)
-import Libs(getInside)
-
+import Libs(getInside, getIndex)
+  {--
 putMessageG :: Canvas -> CInfo -> State -> IO State
 putMessageG c ((cvW,cvH),_) st = do
     let sw = swc st
@@ -19,10 +19,10 @@ putMessageG c ((cvW,cvH),_) st = do
           let ms = msg st
               mc = mct st
               ml = length ms-1 
-              (_,h) = sz st
+              h = if ism sw then snd (sz st) + 3 else 0
               imx = floor (cvW/wt) - 1
               igx = floor (cvW/wg) - 2
-              iq = iy+h+3
+              iq = iy+h
               (p,q) = if mc==0 then (imx,iq) else mps st
               tmsg = take (mc+1) ms 
               lmsg = if null tmsg then ' ' else last tmsg
@@ -75,6 +75,80 @@ putMessageG c ((cvW,cvH),_) st = do
                    when (not isc && not iscx) $ putLet c col nfs 0 (p,q) ch
           return nst{mct=nmct,mps=npos',mcl=cln,msc=nmsc,swc=nsw{ims=nims}}
     else return st
+    --}
+
+prepareMessage (cvW,cvH) sw st =
+  let ms = msg st
+      mc = mct st
+      ml = length ms-1 
+      h = if ism sw then snd (sz st) + 3 else 0
+      imx = floor (cvW/wt) - 1
+      igx = floor (cvW/wg) - 2
+      iq = iy+h
+      (p,q) = if mc==0 then (imx,iq) else mps st
+      tmsg = take (mc+1) ms 
+      lmsg = if null tmsg then ' ' else last tmsg
+      ch = case lmsg of '、' -> ' '; '。' -> ' '; '}' -> ' ';  _ -> lmsg 
+      ic = ch=='「'
+      ir = ch=='\n'
+      ip = lmsg=='。' 
+      irb = ch=='：'
+      isc = ch=='{'
+      cln
+        |ir = 0
+        |ic = 1
+        |otherwise = mcl st
+      col = chColors!!cln
+      rbs = if irb then getInside '：' mc ms else ""
+      scr = if isc then getInside '}' mc ms else ""
+      cta
+        |irb = length rbs + 2
+        |isc = length scr + 2
+        |otherwise = 1
+      nmct = if mc+cta>ml then 0 else mc+cta
+      nims = mc+cta <= ml
+      npos
+        |irb = (p,q)
+        |ir = (p-1,iq)
+        |otherwise = nextPQ cvH iq (p,q) 
+      iscx = fst npos==1 && fst npos/=p
+      nst = if isc then makeEvent scr st{swc=sw{imp=ip}} else st{swc=sw{imp=ip}}
+      nsw = swc nst
+      scx = if mc==0 then 0 else msc nst
+      npos' = if iscx then (p,iq) else npos
+      nmsc = if iscx then scx+1 else scx
+      eq = floor ((cvH-cvT)/ht)
+      p' = if iq==q then p+1 else p
+      q' = if iq==q then eq else q-1
+   in (ch,p,q,p',q',iq,mc,ms,col,rbs,imx,igx,scx,rfs,irb,isc,iscx,nmct,npos',cln,nmsc,nims,nsw,nst) 
+
+prepareNormal isc iscx mc ms imx scx nsw nst =
+    let itp0 = isc && ich nsw
+        itp1 = not isc && iscx
+        msg'
+          | itp0 = let (dlgs,_) = unzip (chd nst)
+                    in makeChoiceMessage (msg nst) dlgs (chn nst) 
+          | itp1 = take (mc+1) ms
+          | otherwise = ""
+        posx
+          | itp0 = imx+scx
+          | itp1 = imx+scx+1
+          | otherwise = 0
+     in (itp0, itp1, msg', posx) 
+
+putMessageG :: Canvas -> CInfo -> State -> IO State
+putMessageG c ((cvW,cvH),_) st = do 
+   let sw = swc st
+   if ims sw && not (imp sw) then do
+     let (ch,p,q,p',q',iq,mc,ms,col,rbs,imx,igx,scx,rfs,irb,isc,iscx,nmct,npos',cln,nmsc,nims,nsw,nst)
+            = prepareMessage (cvW,cvH) sw st
+     if irb then mapM_ (\(ch,rd) -> putLet c col rfs rd (p',q') ch) (zip rbs [0,1..]) 
+            else do
+              let (itp0,itp1,msg',posx) = prepareNormal isc iscx mc ms imx scx nsw nst
+              when (itp0||itp1) $ clearMessage c igx nst >> putMessageT c cvH (posx,iq) msg'
+              when (not isc && not iscx) $ putLet c col nfs 0 (p,q) ch
+     return nst{mct=nmct,mps=npos',mcl=cln,msc=nmsc,swc=nsw{ims=nims}}
+   else return st
 
 putMessageT :: Canvas -> Double -> Pos -> String -> IO ()
 putMessageT c cvH (p,q) = putLetters c cvH 0 q (p,q) 
@@ -90,7 +164,7 @@ putLetters c cvH cln iq (p,q) (x:xs) = do
     _     -> do let lt = case x of '、' -> '@'; '。' -> '@'; '*' -> '@';  _ -> x
                     ncln = case x of
                              '「' -> 1
-                             '*'  -> 3
+                             '*'  -> 2
                              _    -> cln
                     col = chColors!!ncln
                 when (lt/='@') $ putLet c col nfs 0 (p,q) lt 
@@ -142,13 +216,15 @@ putMoziCl c = do
 clearMessage :: Canvas -> Int -> State -> IO ()
 clearMessage c igx st = do
   putMoziCl c
-  let p = player st 
-      (wd,_) = sz st
-      (x,y) = xy p 
-      pxy = (x+1+igx-wd,y+iy+1)
-      cnm = if et p==' ' then 1 else 2
-  putGrid c (igx-wd,iy) (gr p)
-  putMozi c (chColors!!cnm) pxy [pl p]
+  let isMap = ism$swc st 
+  when isMap $ do
+    let p = player st 
+        (wd,_) = sz st
+        (x,y) = xy p 
+        pxy = (x+1+igx-wd,y+iy+1)
+        cnm = if et p==' ' then 1 else 2
+    putGrid c (igx-wd,iy) (gr p)
+    putMozi c (chColors!!cnm) pxy [pl p]
 
 
 putMozi :: Canvas -> Color -> Pos -> String -> IO ()
@@ -172,6 +248,12 @@ putLet c col fs rd (x,y) ch = do
             rta = if irt then pi/2 else 0
             ex = if irt then nfsd/6 else 0
             ext = if irt then nfsd/6*5 else 0
+
+putWst :: Canvas -> [Bitmap] -> Fsize -> Pos -> Char -> IO () 
+putWst c wsts fs (x,y) ch = do
+  renderOnTop c $ translate (px, py+5) $ scale (0.7,0.7) $ draw (wsts!!ind) (0,0)
+    where ind = if ch `elem` wstIndex then getIndex ch wstIndex else 14
+          (px,py) = (fromIntegral x * wg, fromIntegral y * hg)
             
 rtChar :: Char -> Bool
 rtChar ch = (cp>31 && cp<128)||(ch `elem` "ー〜。「＜＞（）") 

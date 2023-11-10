@@ -21,7 +21,7 @@ type CInfo = ((Double,Double),(Double,Double))
 -- Fr: Free(can have) Bl: Block Ex: Exist(can't have) Mv: can push
 -- Pn: Pon(function argument) Wn: Wander(random move) Cm: Come towards Player
 -- DB: Dark Block DF: Dark Free
-data Mode = Fr | Bl | Ex | Mv | Pn | Wn | Cm | DB | DF deriving (Eq,Show)
+data Mode = Fr | Bl | Ex | Mv | Pn | Wn | Cm | DB | DF deriving (Eq,Show,Read)
 
 data Dir = Up | Dw | Lf | Rt | Cn deriving (Eq,Show)
 
@@ -61,7 +61,8 @@ data Switch = Switch { ils:: !Bool,    -- Leave Stage?
                        imp:: !Bool,     -- Message Pause?
                        itc:: !Bool,     -- Touch Is True?
                        ini:: !Bool,     -- No Input?
-                       ich:: !Bool    -- Choice Mode?
+                       ich:: !Bool,    -- Choice Mode?
+                       ism:: !Bool     -- Show Map?
                      } deriving (Eq, Show)
 
 iy :: Int
@@ -76,3 +77,11 @@ nfs = 20; rfs = 8 -- normal font size, rubi font size
 cvT :: Double
 cvT = 10  --trim(yohaku)
 
+imgfile :: String
+imgfile = "Images/img"
+
+wstfile :: String
+wstfile = "WstImage/wst"
+
+wstIndex :: String
+wstIndex = "あいうえおxkhnmtrsy かはなまきひにみくふぬむけへねめこほのもとろそよをてれせゑつるすゆんちりしゐたらさやわ゛阿和宇吾付須被意百雄間波が9穂ぞ話葉ざぐび緒ど3ずばぶぎべ補芽1府場じ個我ご図時曾火日だ座羽4馬部祖炉具語づ後子男でぜ出裳美"

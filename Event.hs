@@ -1,7 +1,9 @@
 module Event (makeEvent) where
 
+import Data.List(delete)
+import Data.Maybe(fromMaybe)
 import Define (State(..),Switch(..),Play(..),Mode(..))
-import Grid(changeGridType,intoGrid,clFromGrid)
+import Grid(changeGridType,intoGrid,clFromGrid,fromGrid,posGrid)
 import Libs(sepByChar,getIndex,concatWith)
 
 makeEvent :: String -> State -> State
@@ -13,15 +15,31 @@ makeEvent scr st =
         "da" -> delAllEvent st
         "ct" -> changeType es st 
         "p" -> putCell es st
+        "c" -> clearCell es st
         "cleq" -> clearEqual st
         "m" -> addMemory es st
         "if" -> makeDecision es st
-        "ch" -> makeChoice es st
+        "ch" -> makeChoice es st{chd=[]}
+        "sm" -> showMap st
+        "hm" -> hideMap st
         _   -> st
+
+showMap :: State -> State
+showMap st = st{swc=(swc st){ism=True}}
+
+hideMap :: State -> State
+hideMap st = st{swc=(swc st){ism=False}}
 
 clearEqual :: State -> State 
 clearEqual st = let p = player st
                  in st{player=p{gr=clFromGrid '=' (gr p)}} 
+
+clearCell :: [String] -> State -> State
+clearCell [] st = st
+clearCell (a:xs) st = let p = player st
+                          (x':y':_) = sepByChar ',' a
+                          x = read x'::Int; y = read y'::Int
+                       in clearCell xs st {player = p{gr=intoGrid (x,y) (' ',Fr) (gr p)}}
 
 putCell :: [String] -> State -> State 
 putCell [] st = st 
@@ -64,7 +82,10 @@ delFrom id lst = take id lst ++ drop (id+1) lst
 
 addMemory :: [String] -> State -> State
 addMemory [] st = st
-addMemory (k:v:xs) st = addMemory xs st{mem=(k,v):mem st}
+addMemory (k:v:xs) st = let memSt = mem st 
+                            tv = fromMaybe "" $ lookup k memSt
+                            nmem = if tv=="" then memSt else delete (k,tv) memSt
+                         in addMemory xs st{mem=(k,evalString st v):nmem}
 
 makeDecision :: [String] -> State -> State
 makeDecision [] st = st
@@ -81,3 +102,31 @@ makeChoice (x:xs) st = let (c:d:_) = sepByChar ',' x
                         in makeChoice xs st{chd=chd st++[(c,d)]}
 
 --------------------------------------------------------------------
+
+evalString :: State -> String -> String
+evalString st = unwords.execParts st [].sepByChar '_' 
+
+execParts :: State -> [String] -> [String] -> [String]
+execParts _ acc [] = acc 
+execParts st acc (x:xs) = 
+  let def = lookup x definitions
+      code = fromMaybe ["empty"] def
+   in if code==["empty"] then execParts st (acc++[x]) xs 
+                         else let args = reverse $ zip (reverse acc) (reverse code)
+                                  alng = length args
+                                  nacc = reverse$drop alng (reverse acc)
+                               in execParts st (nacc ++ [execCode st x (map fst args)]) xs
+
+definitions :: [(String,[String])]
+definitions = [("getch",["p","q"]),("getpos",["ch","tp"])
+              ,("==",["a","b"]),("&&",["a","b"]),("||",["a","b"])]
+
+execCode :: State -> String -> [String] -> String
+execCode st str args =
+  case str of
+    "getch" -> let (ch,_) = fromGrid (read (head args),read (args!!1)) ((gr.player) st) in [ch]
+    "getpos" -> let pos = posGrid (head (head args),read (args!!1)) ((gr.player) st) in show pos
+    "==" -> if head args==args!!1 then "T" else "F"
+    "&&" -> if head args=="T" && args!!1=="T" then "T" else "F"
+    "||" -> if head args=="T" || args!!1=="T" then "T" else "F"
+    _ -> ""

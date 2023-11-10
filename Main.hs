@@ -3,22 +3,24 @@ import Haste.Events (onEvent,preventDefault,KeyEvent(..),KeyData(..),
                      MouseEvent(..),MouseData(..),TouchEvent(..),TouchData(..))
 import Haste.DOM (document,elemById,fromElem)
 import Data.IORef(newIORef,readIORef,writeIORef)
-import CvLoop (initiate,inputLoop,mouseClick)
+import CvLoop (inputLoop,mouseClick)
 import OutToCanvas (putMessageG)
-import Browser (getCanvasInfo,cvRatio,tcStart,tcEnd,touchIsTrue)
+import Browser (getCanvasInfo,cvRatio,tcStart,tcEnd,touchIsTrue,setBmps)
+import Initialize (initState)
 
 main :: IO ()
 main = do
+  (_, wsts) <- setBmps
   Just ce <- elemById "canvas2"
   Just c <- fromElem ce
   ci <- getCanvasInfo c
-  st <- initiate c ci
-  state <- newIORef st
+  --st <- initiate c ci
+  state <- newIORef initState 
   onEvent document KeyDown $ \(KeyData kc _ _ _ _) -> do
     preventDefault
-    readIORef state >>= inputLoop c ci kc >>= writeIORef state
+    readIORef state >>= inputLoop c wsts ci kc >>= writeIORef state
   onEvent ce Click $ \(MouseData (x,y) _ _) -> do
-    readIORef state >>= mouseClick c ci x y >>= writeIORef state
+    readIORef state >>= mouseClick c wsts ci x y >>= writeIORef state
   onEvent ce TouchStart $ \(TouchData {}) -> do
     readIORef state >>= tcStart >>= writeIORef state
   onEvent ce TouchEnd $ \(TouchData {}) -> do

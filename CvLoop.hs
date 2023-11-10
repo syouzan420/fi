@@ -1,6 +1,6 @@
-module CvLoop (initiate,inputLoop,mouseClick) where
+module CvLoop (inputLoop,mouseClick) where
 
-import Haste.Graphics.Canvas(Canvas)
+import Haste.Graphics.Canvas(Canvas,Bitmap)
 import Haste.Audio
 import Control.Monad(unless)
 import Data.List(intercalate)
@@ -8,11 +8,12 @@ import Define(State(..),Play(..),Switch(..),Mode(..),LSA(..),CInfo,iy,wg,wt)
 import Stages(stages,players,initPos,gridSize)
 import Grid(checkGrid,makeGrid)
 import Browser(chColors,clFields,flToKc,fields,cvRatio,localStore,stringToJson)
-import OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl,clearMessage,putMozi)
+import OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl,clearMessage,putMozi,putWst)
 import Check(checkEv,getMessage)
 import Libs(getRandomNumIO,sepByChar)
-import Action(initState,keyCodeToChar,keyChoice,keyCheck,putOut,plMove,makeChoiceMessage)
+import Action(keyCodeToChar,keyChoice,keyCheck,putOut,plMove,makeChoiceMessage)
 
+  {--
 initiate :: Canvas -> CInfo -> IO State 
 initiate c ((cvW,_),_) = do
   let (x,y)=(xy.player) initState
@@ -23,14 +24,15 @@ initiate c ((cvW,_),_) = do
   putGrid c (ix,iy) ((gr.player) initState)
   putMozi c (chColors!!1) (px+ix,py) "@"
   return initState 
+  --}
 
-mouseClick :: Canvas -> CInfo -> Int -> Int -> State -> IO State
-mouseClick c ci x y = do
+mouseClick :: Canvas -> [Bitmap] -> CInfo -> Int -> Int -> State -> IO State
+mouseClick c wsts ci x y = do
   let (rtx,rty) = cvRatio ci
       nx = fromIntegral x*rtx
       ny = fromIntegral y*rty
       cvWH = fst ci
-  inputLoop c ci (flToKc (clFields nx ny (fields cvWH))) 
+  inputLoop c wsts ci (flToKc (clFields nx ny (fields cvWH))) 
 
 skipMessage :: Canvas -> CInfo -> State -> IO State
 skipMessage c ci st = do
@@ -39,67 +41,71 @@ skipMessage c ci st = do
   if imp sw' || not (ims (swc st)) then return st'{swc=sw'{ini=False}}
                                    else skipMessage c ci st'
 
-inputLoop :: Canvas -> CInfo -> Int -> State -> IO State 
-inputLoop c ci@((cvW,cvH),_) kc st
+choiceAction :: Canvas -> Double -> Int -> Int -> Char -> State -> IO State
+choiceAction c cvH imx igx ch st = do
+  print "choice"
+  let hi = if ism (swc st) then snd (sz st) + 3 else 0
+      (dlgs,mnas) = unzip (chd st)
+      cn = chn st
+      ncn = keyChoice (length dlgs - 1) cn ch 
+  case ncn of
+     (-1) -> do 
+               let nmsg = getMessage (mnas!!cn)
+               clearMessage c igx st
+               return st{msg=nmsg,swc=(swc st){ims=True,ich=False,imp=False}}
+     (-2) -> return st
+     _    -> do
+               let cmsg = makeChoiceMessage (msg st) dlgs ncn 
+               clearMessage c igx st
+               putMessageT c cvH (imx+ msc st,iy+hi) cmsg
+               return st{chn=ncn}
+
+mapAction :: Canvas -> [Bitmap] -> CInfo -> Int -> Char -> State -> IO State
+mapAction c wsts ci igx ch st = do
+  let p@(Play xyP _ _ _ _ rgnP elgP _ iscP) = player st
+  sequence_ [print (evt st),print (ecs st), print (mem st),print elgP,print iscP,print (jps st)]
+  (_,nrg) <- getRandomNumIO (5,rgnP)
+  let (x,y) = xyP 
+      (wd,hi) = sz st
+      ix = igx-wd
+      (x',y') = keyCheck (wd,hi) (x,y) ch 
+      p' = plMove (x',y') p
+      (tx,ty) = xy p'
+      (px,py) = (x+1,y+iy+1)
+      (px',py') = (tx+1,ty+iy+1)
+      p'' = if ch==' ' then putOut p' else p'
+      nst = checkEv 0 (elg p'') (evt st) st{player=p''{rgn=nrg}}
+      nsw = swc nst
+      (wd',_) = sz nst
+      ix' = igx-wd'
+  putGrid c (ix',iy) (gr (player nst))
+  --unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
+  sData <- case ch of
+             's' -> localStore Save "savedata" (makeSaveData st) 
+             'r' -> localStore Load "savedata" ""
+             'd' -> localStore Remv "savedata" ""
+             _   -> return "---"
+  if ch=='r' && sData/="loadError" then loadState c ci sData nst else do 
+    print sData
+    if ils nsw || ch=='n' then nextStage c wsts ci nst{swc=nsw{ims=False}} 
+                         else do
+          let pxy = (px'+ix,py')
+          if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
+                                  else putMozi c (chColors!!2) pxy [pl p'']
+         -- putWst c wsts 20 (23,3) 'あ' -- for wst drawing test
+          return nst
+
+inputLoop :: Canvas -> [Bitmap] -> CInfo -> Int -> State -> IO State 
+inputLoop c wsts ci@((cvW,cvH),_) kc st
   | iniSt = return st
   | imsSt && not impSt = skipMessage c ci st{swc=sw{ini=True}} 
-  | impSt = do 
-      if ichSt then do
-          print "choice"
-          let i = keyCodeToChar kc
-              (wd,hi) = szSt
-              (dlgs,mnas) = unzip (chd st)
-              cn = chn st
-              ncn = keyChoice (length dlgs - 1) cn i
-          case ncn of
-            (-1) -> do 
-                      let nmsg = getMessage (mnas!!cn)
-                      clearMessage c igx st
-                      return st{msg=nmsg,swc=sw{ims=True,ich=False,imp=False}}
-            (-2) -> return st
-            _    -> do
-                      let cmsg = makeChoiceMessage (msg st) dlgs ncn 
-                      clearMessage c igx st
-                      putMessageT c cvH (imx+ msc st,iy+hi+3) cmsg
-                      return st{chn=ncn}
-                else return st{swc=sw{imp=False}}
-  |otherwise = do
-      let p@(Play xyP _ _ _ _ rgnP elgP _ iscP) = player st
-      sequence_ [print (evt st),print (ecs st), print (mem st),print elgP,print iscP
-                ,print ichSt,print (jps st)]
-      (_,nrg) <- getRandomNumIO (5,rgnP)
-      let i = keyCodeToChar kc 
-          (x,y) = xyP 
-          (wd,hi) = szSt
-          ix = igx-wd
-          (x',y') = keyCheck (wd,hi) (x,y) i
-          p' = plMove (x',y') p
-          (tx,ty) = xy p'
-          (px,py) = (x+1,y+iy+1)
-          (px',py') = (tx+1,ty+iy+1)
-          p'' = if i==' ' then putOut p' else p'
-          nst = checkEv 0 (elg p'') (evt st) st{player=p''{rgn=nrg}}
-          nsw = swc nst
-          (wd',_) = sz nst
-          ix' = igx-wd'
-      putGrid c (ix',iy) (gr (player nst))
-      --unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
-      --print (stringToJson (makeSaveData st)) 
-      sData <- if i=='s' then localStore Save "savedata" (makeSaveData st) 
-          else if i=='r' then localStore Load "savedata" ""
-          else if i=='d' then localStore Remv "savedata" ""
-                         else return "-----"
-      nst' <- if i=='r' && sData/="loadError" then loadState c ci sData nst else return nst
-      print sData
-      if ils nsw || i=='n' then nextStage c ci nst'{swc=nsw{ims=False}} 
-                           else do
-         let pxy = (px'+ix,py')
-         if et (player nst')==' ' then putMozi c (chColors!!1) pxy [pl p'']
-                                  else putMozi c (chColors!!2) pxy [pl p'']
-         return nst'
-           where sw = swc st
-                 iniSt = ini sw; impSt = imp sw; imsSt = ims sw; ichSt = ich sw; szSt = sz st
-                 imx = floor (cvW/wt) - 1; igx = floor (cvW/wg) - 2
+  | impSt = if ichSt then choiceAction c cvH imx igx ch st else return st{swc=sw{imp=False}}
+  | ismSt = mapAction c wsts ci igx ch st
+  | otherwise = return st 
+       where sw = swc st
+             iniSt = ini sw; impSt = imp sw; imsSt = ims sw; ichSt = ich sw; ismSt = ism sw
+             imx = floor (cvW/wt) - 1; igx = floor (cvW/wg) - 2
+             ch = keyCodeToChar kc
 
 makeSaveData :: State -> String
 makeSaveData st =
@@ -122,27 +128,16 @@ loadState c ci str st = do
       npl = players!!nsn
       nxy = initPos!!nsn
       ngr = makeGrid nsz (stages!!nsn)
-      nst = st{player=(player st){xy=nxy, gr=ngr, pl=npl, et=' ', sn=nsn},evt=nevt,ecs=necs}
-  update c ci nst 
+      nst = st{player=(player st){xy=nxy, gr=ngr, pl=npl, et=' ', sn=nsn},sz=nsz,evt=nevt,ecs=necs}
+  return nst
 
 listToTupples :: [String] -> [(String,String)]
 listToTupples [] = []
 listToTupples [x] = []
 listToTupples (x:y:xs) = (x,y):listToTupples xs
 
-update :: Canvas -> CInfo -> State -> IO State 
-update c ((cvW,_),_) st = do
-  let (x,y)=(xy.player) st 
-      (wd,hi)=sz st 
-      (px,py)=(x+1,y+iy+1)
-      igx = floor (cvW/wg) - 2
-      ix = igx-wd
-  putGrid c (ix,iy) ((gr.player) st)
-  putMozi c (chColors!!1) (px+ix,py) [(pl.player) st] 
-  return st 
-
-nextStage :: Canvas -> CInfo -> State -> IO State 
-nextStage c ci st = do
+nextStage :: Canvas -> [Bitmap] -> CInfo -> State -> IO State 
+nextStage c wsts ci st = do
   let p = player st
       js = jps st
       nsn = if js<0 then sn p + 1 else js
@@ -156,7 +151,7 @@ nextStage c ci st = do
               iwn=checkGrid (' ',Wn) grid
               np = p{xy=initPos!!nsn, gr=grid, pl=players!!nsn, et=' ',sn=nsn,
                      elg=nlg,isc=False,iw=iwn}
-          inputLoop c ci 64 st{sz=nsz,player=np,msg="",jps = -1,swc=(swc st){ils=False,igc=False}}
+          inputLoop c wsts ci 64 st{sz=nsz,player=np,msg="",jps = -1,swc=(swc st){ils=False,igc=False}}
 
 gameClear :: Canvas -> State -> IO State 
 gameClear c st = do putMoziCl c
@@ -164,8 +159,6 @@ gameClear c st = do putMoziCl c
                     putMozi c col (2,5) "Congratulations!"
                     putMozi c col (3,8) "Coding : yokoP"
                     putMozi c col (3,10) "Test Play : takaPon"
-                    putMozi c col (4,14) "I spent a special week"
-                    putMozi c col (5,15) "10/18 to 10/25 in 2021"
                     putMozi c col (2,17) "Thank you for playing!"
                     let nsz=head gridSize
                         p = player st

@@ -1,5 +1,5 @@
 module Grid (intoGrid,fromGrid,sizeGrid,checkGrid,makeGrid,toSee,toHide,
-             changeGridType,clFromGrid) where
+             changeGridType,clFromGrid,posGrid) where
 
 import Define (Pos,Cell,Stage,Size,Grid,Mode(..))
 
@@ -11,6 +11,16 @@ intoGrid (x,y) (ch,tp) grid =
 
 fromGrid :: Pos -> Grid -> Cell
 fromGrid (x,y) grid = (grid!!y)!!x
+
+posGrid :: Cell -> Grid -> Pos
+posGrid _ [] = (0,0) 
+posGrid cel (y:ys)
+  | cel `elem` y = (posxGrid cel y,0)
+  | otherwise = (fst$posGrid cel ys, 1 + snd (posGrid cel ys))
+  where posxGrid _ [] = 0 
+        posxGrid cl (x:xs)
+          | cl==x = 0
+          | otherwise = 1 + posxGrid cl xs
 
 sizeGrid :: Grid -> Size
 sizeGrid grid =
