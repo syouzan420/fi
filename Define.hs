@@ -65,8 +65,8 @@ data Switch = Switch { ils:: !Bool,    -- Leave Stage?
                        ism:: !Bool     -- Show Map?
                      } deriving (Eq, Show)
 
-iy :: Int
-iy = 2
+miy :: Int
+miy = 2
 
 wg, hg, wt, ht :: Double 
 wg = 16; hg = 20; wt = 28; ht = 20 -- grid width & height , tategaki letters width & height

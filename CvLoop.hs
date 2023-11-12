@@ -4,7 +4,7 @@ import Haste.Graphics.Canvas(Canvas,Bitmap)
 import Haste.Audio
 import Control.Monad(unless)
 import Data.List(intercalate)
-import Define(State(..),Play(..),Switch(..),Mode(..),LSA(..),CInfo,iy,wg,wt)
+import Define(State(..),Play(..),Switch(..),Mode(..),LSA(..),CInfo,miy,wg,wt)
 import Stages(stages,players,initPos,gridSize)
 import Grid(checkGrid,makeGrid)
 import Browser(chColors,clFields,flToKc,fields,cvRatio,localStore,stringToJson)
@@ -12,19 +12,6 @@ import OutToCanvas(putMessageG,putMessageT,putGrid,putMoziCl,clearMessage,putMoz
 import Check(checkEv,getMessage)
 import Libs(getRandomNumIO,sepByChar)
 import Action(keyCodeToChar,keyChoice,keyCheck,putOut,plMove,makeChoiceMessage)
-
-  {--
-initiate :: Canvas -> CInfo -> IO State 
-initiate c ((cvW,_),_) = do
-  let (x,y)=(xy.player) initState
-      (wd,hi)=sz initState
-      (px,py)=(x+1,y+iy+1)
-      igx = floor (cvW/wg) - 2
-      ix = igx-wd
-  putGrid c (ix,iy) ((gr.player) initState)
-  putMozi c (chColors!!1) (px+ix,py) "@"
-  return initState 
-  --}
 
 mouseClick :: Canvas -> [Bitmap] -> CInfo -> Int -> Int -> State -> IO State
 mouseClick c wsts ci x y = do
@@ -42,7 +29,7 @@ skipMessage c ci st = do
                                    else skipMessage c ci st'
 
 choiceAction :: Canvas -> Double -> Int -> Int -> Char -> State -> IO State
-choiceAction c cvH imx igx ch st = do
+choiceAction c cvH mix gix ch st = do
   print "choice"
   let hi = if ism (swc st) then snd (sz st) + 3 else 0
       (dlgs,mnas) = unzip (chd st)
@@ -51,35 +38,35 @@ choiceAction c cvH imx igx ch st = do
   case ncn of
      (-1) -> do 
                let nmsg = getMessage (mnas!!cn)
-               clearMessage c igx st
+               clearMessage c gix st
                return st{msg=nmsg,swc=(swc st){ims=True,ich=False,imp=False}}
      (-2) -> return st
      _    -> do
                let cmsg = makeChoiceMessage (msg st) dlgs ncn 
-               clearMessage c igx st
-               putMessageT c cvH (imx+ msc st,iy+hi) cmsg
+               clearMessage c gix st
+               putMessageT c cvH (mix+ msc st,miy+hi) cmsg
                return st{chn=ncn}
 
 mapAction :: Canvas -> [Bitmap] -> CInfo -> Int -> Char -> State -> IO State
-mapAction c wsts ci igx ch st = do
+mapAction c wsts ci gix ch st = do
   let p@(Play xyP _ _ _ _ rgnP elgP _ iscP) = player st
   sequence_ [print (evt st),print (ecs st), print (mem st),print elgP,print iscP,print (jps st)]
   (_,nrg) <- getRandomNumIO (5,rgnP)
   let (x,y) = xyP 
       (wd,hi) = sz st
-      ix = igx-wd
+      gsx = gix-wd
       (x',y') = keyCheck (wd,hi) (x,y) ch 
       p' = plMove (x',y') p
       (tx,ty) = xy p'
-      (px,py) = (x+1,y+iy+1)
-      (px',py') = (tx+1,ty+iy+1)
+      (px,py) = (x+1,y+miy+1)
+      (px',py') = (tx+1,ty+miy+1)
       p'' = if ch==' ' then putOut p' else p'
       nst = checkEv 0 (elg p'') (evt st) st{player=p''{rgn=nrg}}
       nsw = swc nst
       (wd',_) = sz nst
-      ix' = igx-wd'
-  putGrid c (ix',iy) (gr (player nst))
-  --unless (ims nsw) $ putMessageT c cvH (imx+msc nst,iy+hi+3) (msg nst)
+      gsx' = gix-wd'
+  putGrid c (gsx',miy) (gr (player nst))
+  --unless (ims nsw) $ putMessageT c cvH (mix+msc nst,miy+hi+3) (msg nst)
   sData <- case ch of
              's' -> localStore Save "savedata" (makeSaveData st) 
              'r' -> localStore Load "savedata" ""
@@ -89,7 +76,7 @@ mapAction c wsts ci igx ch st = do
     print sData
     if ils nsw || ch=='n' then nextStage c wsts ci nst{swc=nsw{ims=False}} 
                          else do
-          let pxy = (px'+ix,py')
+          let pxy = (px'+gsx,py')
           if et (player nst)==' ' then putMozi c (chColors!!1) pxy [pl p'']
                                   else putMozi c (chColors!!2) pxy [pl p'']
          -- putWst c wsts 20 (23,3) 'あ' -- for wst drawing test
@@ -99,12 +86,12 @@ inputLoop :: Canvas -> [Bitmap] -> CInfo -> Int -> State -> IO State
 inputLoop c wsts ci@((cvW,cvH),_) kc st
   | iniSt = return st
   | imsSt && not impSt = skipMessage c ci st{swc=sw{ini=True}} 
-  | impSt = if ichSt then choiceAction c cvH imx igx ch st else return st{swc=sw{imp=False}}
-  | ismSt = mapAction c wsts ci igx ch st
+  | impSt = if ichSt then choiceAction c cvH mix gix ch st else return st{swc=sw{imp=False}}
+  | ismSt = mapAction c wsts ci gix ch st
   | otherwise = return st 
        where sw = swc st
              iniSt = ini sw; impSt = imp sw; imsSt = ims sw; ichSt = ich sw; ismSt = ism sw
-             imx = floor (cvW/wt) - 1; igx = floor (cvW/wg) - 2
+             mix = floor (cvW/wt) - 1; gix = floor (cvW/wg) - 2
              ch = keyCodeToChar kc
 
 makeSaveData :: State -> String
