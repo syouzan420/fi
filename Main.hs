@@ -14,7 +14,6 @@ main = do
   Just ce <- elemById "canvas2"
   Just c <- fromElem ce
   ci <- getCanvasInfo c
-  --st <- initiate c ci
   state <- newIORef initState 
   onEvent document KeyDown $ \(KeyData kc _ _ _ _) -> do
     preventDefault
